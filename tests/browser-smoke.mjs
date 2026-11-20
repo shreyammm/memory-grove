@@ -29,11 +29,13 @@ async function clickNav(page,name){
   if(await toggle.isVisible())await toggle.click();
   await target.click();
 }
-async function exportArchive(page){
+async function exportArchive(page,chooseDestination=false){
   await clickNav(page,'settings');
+  if(chooseDestination)await clickAction(page,'prepare-backup');
   const download=page.waitForEvent('download');
-  await clickAction(page,'export-vault');
+  await clickAction(page,chooseDestination?'save-backup-file':'export-vault');
   const file=await download;
+  if(chooseDestination)await clickAction(page,'close-modal');
   const filename=await file.path();
   assert.ok(filename,'A valid encrypted backup must be downloaded');
   const data=JSON.parse(await fs.readFile(filename,'utf8'));
@@ -112,7 +114,7 @@ try{
   await clickNav(page,'settings');
   await clickAction(page,'check-integrity');
   await page.getByText(/Verified .* original files/).first().waitFor();
-  const exported=await exportArchive(page);
+  const exported=await exportArchive(page,true);
   const json=JSON.stringify(exported.data);
   assert.equal(json.includes('Nani and the monsoon'),false,'Backup must keep story content encrypted');
   assert.equal(json.includes('A family portrait'),false,'Backup must keep photo descriptions encrypted');
