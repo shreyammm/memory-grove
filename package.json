@@ -1,0 +1,9 @@
+{
+  "name":"memory-grove",
+  "version":"1.2.0",
+  "private":true,
+  "type":"module",
+  "description":"Dependency-free encrypted offline-first family oral-history PWA",
+  "scripts":{"test":"node --test tests/*.test.js","serve":"python3 -m http.server 8000"},
+  "license":"MIT"
+}

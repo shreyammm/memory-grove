@@ -1,0 +1,25 @@
+name: Memory Grove release checks
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify encryption, archives, event history and PWA assets
+        run: npm test
+      - name: Browser QA tooling (CI only; no app runtime dependencies)
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium webkit
+      - name: 'Run Chromium and WebKit: create, record, archive, restore, merge, offline'
+        run: |
+          node tests/browser-smoke.mjs
+          BROWSER=webkit node tests/browser-smoke.mjs
+      - name: Check JavaScript syntax
+        run: |
+          for file in app.js db.js model.js crypto.js art.js sw.js; do node --check "$file"; done

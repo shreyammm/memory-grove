@@ -1,0 +1,17 @@
+# Never place a family's private archives or recordings in public source control.
+*.grove
+*.grove.json
+.env
+.env.*
+private/
+backups/
+family-recordings/
+recordings/
+*.mp4
+*.mov
+*.webm
+*.wav
+*.m4a
+*.heic
+node_modules/
+.DS_Store
