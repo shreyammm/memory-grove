@@ -165,3 +165,33 @@ input:focus-visible,button:focus-visible,textarea:focus-visible,select:focus-vis
  .entry-form {padding:31px 24px;}
  .entry-form h1 {font-size:42px;}
 }
+
+/* Opening folio */
+.folio-page {min-height:100svh;display:grid;place-items:center;padding:clamp(16px,4vw,64px);background:#eee6d9;}
+.folio {display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1fr);width:min(1040px,100%);background:#fffbf3;border:1px solid #d6cab6;box-shadow:0 18px 54px #3f332014;}
+.folio-art {margin:14px;position:relative;min-height:400px;overflow:hidden;background:#bac2a5;border:1px solid #b79b6f;}
+.folio-art img,.courtyard-home {display:block;width:100%;height:100%;object-fit:cover;}
+.folio-art img {position:absolute;inset:0;}
+.folio-form {align-self:center;padding:clamp(28px,4vw,60px);}
+.folio-brand {font:small-caps 600 18px/1.2 var(--serif);color:#7e4737;letter-spacing:.07em;margin:0 0 24px;}
+.folio-form h1 {font:normal clamp(36px,4vw,56px)/1.04 var(--serif);letter-spacing:-.045em;margin:0;color:#283e33;}
+.folio-form h1 em {color:#8d463e;}
+.folio-form header>p:last-child {font:17px/1.5 var(--serif);color:#536050;margin:14px 0 24px;}
+.folio-passwords {display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.folio-form label {min-width:0;}
+.folio-form input {width:100%;min-width:0;font-size:16px;background:#fffdfa;border-color:#cbbfac;}
+.folio-form .form-stack {gap:14px;}
+.folio-form small,.folio-storage {font:13px/1.5 var(--sans);color:#556056;}
+.folio-form button[type=submit] {min-height:46px;}
+.folio-storage {margin:14px 0 20px;}
+.folio-form .text-action {font-size:14px;}
+@media(max-width:700px){
+  .folio-page {padding:0;background:#fffbf3;display:block;}
+  .folio {display:block;border:0;box-shadow:none;}
+  .folio-art {height:clamp(136px,24svh,220px);min-height:0;margin:0;border:0;border-bottom:2px solid #af945e;}
+  .folio-art img {object-position:50% 60%;}
+  .folio-form {padding:24px max(22px,6vw) 32px;}
+  .folio-brand {margin-bottom:12px;}
+  .folio-form h1 {font-size:38px;}
+}
+@media(max-width:350px){.folio-passwords {grid-template-columns:1fr;}}

@@ -1,5 +1,5 @@
-const CACHE = 'memory-grove-shell-v3';
-const APP_SHELL = ['./', './index.html', './app.js', './db.js', './model.js', './crypto.js', './art.js', './styles.css', './painting.css', './assets/grove-miniature.svg', './manifest.webmanifest', './privacy.html', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-apple.png'];
+const CACHE = 'memory-grove-shell-v4';
+const APP_SHELL = ['./', './index.html', './app.js', './db.js', './model.js', './crypto.js', './art.js', './styles.css', './painting.css', './assets/grove-miniature.svg', './assets/courtyard.webp', './manifest.webmanifest', './privacy.html', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-apple.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
 });

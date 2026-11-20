@@ -41,11 +41,20 @@ function render(){
   if(state.view==='capture'&&state.recorder) refreshRecordIndicator();
 }
 function onboardPage(){
-  return `<div class="entry-page"><div class="entry-frame"><div class="entry-art"><span class="entry-topline">A PRIVATE PLACE TO KEEP WHAT MATTERS</span>${treeArt({compact:true})}<div class="entry-art-bottom">जड़ों से जुड़ी कहानियाँ &nbsp; · &nbsp; stories with roots</div></div>
-  <section class="entry-form"><div class="eyebrow">✿ &nbsp; WELCOME TO MEMORY GROVE</div><h1>Every family has <em>a thousand</em> stories.</h1><p class="lead">Plant them here, and let generations wander through them. Your family archive is encrypted, private, and yours to keep.</p>
-  <form data-form="onboard" class="form-stack"><label>Your family's grove<input name="family" placeholder="e.g. The Mehta family" required maxlength="100"></label><label>Who will be the first person in your grove?<input name="person" placeholder="e.g. Nani, Asha, or your own name" required maxlength="100"></label><label>Create a private passphrase<input name="passphrase" type="password" placeholder="At least 10 characters" required minlength="10" autocomplete="new-password"></label><label>Confirm passphrase<input name="confirm" type="password" placeholder="Repeat your passphrase" required autocomplete="new-password"></label><button class="btn btn-primary wide" type="submit">Begin our family's story <span>→</span></button></form>
-  <p class="note warning-note">Write down your passphrase somewhere safe: there is no account or password reset. Browser storage is not a second backup. After your first story, export an encrypted .grove archive and save it somewhere independent.</p>
-  <div class="entry-divider">ALREADY HAVE A GROVE?</div><button class="text-action" data-action="restore-start">Restore an encrypted family archive →</button><p class="entry-legal">No sign-up. No ads. No uploads. Free forever to host yourself.</p></section></div></div>`;
+  return `<main class="folio-page"><div class="folio">
+    <figure class="folio-art"><img src="./assets/courtyard.webp" alt="A grandmother and a young woman sharing a quiet moment beneath a flowering tree"></figure>
+    <section class="folio-form"><header><p class="folio-brand">Memory Grove</p><h1>Start your <em>family archive.</em></h1><p>Keep the sound of a voice, the faces in a photograph, and the stories only your family knows.</p></header>
+      <form data-form="onboard" class="form-stack">
+        <label>Family archive name<input name="family" placeholder="e.g. Mehta family" required maxlength="100"></label>
+        <label>Whose stories will you start with?<input name="person" placeholder="e.g. Papa or Nani" required maxlength="100"></label>
+        <div class="folio-passwords"><label>Passphrase<input name="passphrase" type="password" placeholder="10+ characters" required minlength="10" autocomplete="new-password" aria-describedby="key-help"></label>
+        <label>Confirm passphrase<input name="confirm" type="password" required autocomplete="new-password"></label></div>
+        <small id="key-help">Save this in your password manager. You’ll need it to open your archive, and it can’t be reset.</small>
+        <button class="btn btn-primary wide" type="submit">Create family archive <span>→</span></button>
+      </form>
+      <p class="folio-storage">Stories are saved on this device. To keep a second copy, save an encrypted backup to your own cloud drive.</p>
+      <button class="text-action" data-action="restore-start">Open an existing backup →</button>
+    </section></div></main>`;
 }
 function unlockPage(){
   return `<div class="entry-page"><div class="unlock-card"><div class="unlock-symbol">✿</div><div class="eyebrow">YOUR PRIVATE FAMILY ARCHIVE</div><h1>Welcome back<br><em>to the grove.</em></h1><p>Enter your passphrase to open your memories on this device.</p><form data-form="unlock" class="form-stack"><label>Grove passphrase<input name="passphrase" type="password" required autofocus autocomplete="current-password"></label><button class="btn btn-primary wide" type="submit">Unlock the grove →</button></form><p class="note">Your passphrase never leaves your device. We cannot recover it.</p></div></div>`;
@@ -57,7 +66,7 @@ function homeView(){
   const countPhoto=memories.reduce((n,m)=>n+m.attachments.filter(a=>a.mime?.startsWith('image/')).length,0)+people.filter(p=>p.portrait).length;
   const featured=memories.slice(0,3);
   const who=people.find(p=>p.id===state.selectedPerson)||people[0];
-  return `<section class="home-hero"><div class="hero-copy"><div class="eyebrow">✦ &nbsp; ${E(family.name.toUpperCase())}'S PRIVATE GROVE</div><h1>Our stories,<br><em>still growing.</em></h1><div class="delicate-rule">✿ <span></span> ❀</div><p>A home for the voices, faces, little moments, and extraordinary lives that make a family.</p><div class="hero-buttons">${viewButton('capture','+ Preserve a memory')}${viewButton('trees','Wander the life trees ↗','btn btn-outline')}</div><div class="hero-foot">✿ &nbsp; Every story you plant makes the grove grow.</div></div><div class="hero-painting"><div class="painting-label">THE LIVING FAMILY GROVE <span>EST. ${new Date().getFullYear()}</span></div>${treeArt()}<div class="paint-bottom"><span>ROOTED IN LOVE</span><span>GROWING THROUGH GENERATIONS</span></div></div></section>
+  return `<section class="home-hero"><div class="hero-copy"><div class="eyebrow">✦ &nbsp; ${E(family.name.toUpperCase())}'S PRIVATE GROVE</div><h1>Our stories,<br><em>still growing.</em></h1><div class="delicate-rule">✿ <span></span> ❀</div><p>A home for the voices, faces, little moments, and extraordinary lives that make a family.</p><div class="hero-buttons">${viewButton('capture','+ Preserve a memory')}${viewButton('trees','Wander the life trees ↗','btn btn-outline')}</div><div class="hero-foot">✿ &nbsp; Every story you plant makes the grove grow.</div></div><div class="hero-painting"><img class="courtyard-home" src="./assets/courtyard.webp" alt="Two generations sharing stories in a garden"></div></section>
   <section class="stats-band"><div><span class="stat-icon">✿</span><strong>${people.length}</strong><small>${people.length===1?'person':'people'} remembered</small></div><div><span class="stat-icon">❧</span><strong>${memories.length}</strong><small>${memories.length===1?'story':'stories'} preserved</small></div><div><span class="stat-icon">♫</span><strong>${memories.reduce((n,m)=>n+m.attachments.filter(a=>a.mime?.startsWith('audio/')||a.mime?.startsWith('video/')).length,0)}</strong><small>voices & films</small></div><div><span class="stat-icon">▧</span><strong>${countPhoto}</strong><small>photographs</small></div></section>
   <section class="home-lower"><div class="home-prompt"><div class="card-topline">A LITTLE QUESTION TO BEGIN WITH <span>✧</span></div><div class="prompt-art">${miniPlant()}</div><h2>“${E(PROMPTS[(new Date().getDate())%PROMPTS.length].en)}”</h2><p>Sometimes the smallest question opens the most beautiful story.</p><button class="text-action" data-nav="capture">Capture this story →</button></div><div class="recent-box"><div class="section-title"><div><div class="eyebrow">FROM YOUR FAMILY'S ARCHIVE</div><h2>Recently planted</h2></div>${viewButton('archive','View all stories →','text-action')}</div>${featured.length?featured.map(m=>memoryRow(m)).join(''):empty('The first story is waiting','Record a voice, write a memory, or save an old photograph.',viewButton('capture','Plant your first story','btn btn-outline'))}</div></section>
   <div class="tiny-bottom-quote">“A family is a tree of stories, and every voice is a new leaf.”</div>`;
@@ -134,7 +143,7 @@ function detailView(){
   const recordings=m.attachments.filter(a=>a.mime?.startsWith('audio/')||a.mime?.startsWith('video/'));
   const images=m.attachments.filter(a=>a.mime?.startsWith('image/'));
   const hist=state.data.history.get(m.id)||[];
-  return `<button class="text-action back-link" data-nav="archive">← Back to the archive</button><div class="memory-head"><div class="eyebrow">${branchFor(m.branch).symbol} &nbsp; ${E(branchFor(m.branch).name.toUpperCase())} &nbsp; · &nbsp; ${E(m.dateLabel||'A FAMILY STORY')}</div><h1>${E(m.title)}</h1><div class="detail-sub"><span>❧ &nbsp; ${(m.personIds||[]).map(id=>E(personName(id))).join(' · ')}</span>${m.location?`<span>⌖ &nbsp; ${E(m.location)}</span>`:''}<span>First preserved ${formatDate(m.createdAt)}</span></div><div class="detail-actions">${aButton('organize-story','✧ Discover chapters','btn btn-outline btn-small')}${aButton('edit-memory','✎ Add a correction','btn btn-outline btn-small')}${aButton('add-photo','▧ Add a photo','btn btn-outline btn-small')}${aButton('add-transcript','▤ Add transcript','btn btn-outline btn-small')}${aButton('add-note','+ Family note','btn btn-outline btn-small')}</div></div><div class="detail-columns"><div class="detail-main">${m.sourceMemoryId?`<div class="source-origin">✧ This chapter grew from another recording. <button class="text-action" data-detail="${m.sourceMemoryId}">Open the uncut original →</button></div>`:''}${m.story?`<div class="story-prose"><div class="section-counter">THE STORY AS IT WAS TOLD</div><p>${E(m.story).replaceAll('\n','<br>')}</p></div>`:''}
+  return `<button class="text-action back-link" data-nav="archive">← Back to the archive</button><div class="memory-head"><div class="eyebrow">${branchFor(m.branch).symbol} &nbsp; ${E(branchFor(m.branch).name.toUpperCase())} &nbsp; · &nbsp; ${E(m.dateLabel||'A FAMILY STORY')}</div><h1>${E(m.title)}</h1><div class="detail-sub"><span>❧ &nbsp; ${(m.personIds||[]).map(id=>E(personName(id))).join(' · ')}</span>${m.location?`<span>⌖ &nbsp; ${E(m.location)}</span>`:''}<span>First preserved ${formatDate(m.createdAt)}</span></div><div class="detail-actions">${aButton('prepare-backup','Save a backup','btn btn-outline btn-small')}${aButton('organize-story','✧ Discover chapters','btn btn-outline btn-small')}${aButton('edit-memory','✎ Add a correction','btn btn-outline btn-small')}${aButton('add-photo','▧ Add a photo','btn btn-outline btn-small')}${aButton('add-transcript','▤ Add transcript','btn btn-outline btn-small')}${aButton('add-note','+ Family note','btn btn-outline btn-small')}</div></div><div class="detail-columns"><div class="detail-main">${m.sourceMemoryId?`<div class="source-origin">✧ This chapter grew from another recording. <button class="text-action" data-detail="${m.sourceMemoryId}">Open the uncut original →</button></div>`:''}${m.story?`<div class="story-prose"><div class="section-counter">THE STORY AS IT WAS TOLD</div><p>${E(m.story).replaceAll('\n','<br>')}</p></div>`:''}
   ${recordings.length?`<section class="detail-section"><div class="section-counter">ORIGINAL VOICE & FILM</div>${recordings.map(a=>`<div class="media-object"><div class="media-heading"><span>${a.mime.startsWith('video/')?'▣':'♫'}</span><div><b>${E(a.name)}</b><small>${fmtSize(a.size)} · Original ${a.mime.startsWith('video/')?'video':'audio'}</small></div><button class="text-action" data-download-asset="${a.id}">Save ↓</button></div>${a.mime.startsWith('video/')?`<video controls playsinline preload="metadata" data-asset-src="${a.id}" data-play-id="${a.id}"></video>`:`<audio controls preload="metadata" data-asset-src="${a.id}" data-play-id="${a.id}"></audio>`}</div>`).join('')}<div class="small-actions">${aButton('add-moment','+ Mark a timestamped moment','btn btn-outline btn-small')}</div></section>`:''}
   ${images.length?`<section class="detail-section"><div class="section-counter">PHOTOGRAPHS FROM THIS STORY</div><div class="detail-photos">${images.map(a=>`<button data-action="open-image" data-asset-id="${a.id}"><img alt="${E(a.caption||m.title)}" data-asset-src="${a.id}"><span>${E(a.caption||'View original ↗')}</span></button>`).join('')}</div></section>`:''}
   ${m.transcripts.length?`<section class="detail-section"><div class="section-counter">WORDS WORTH KEEPING</div>${m.transcripts.map((t,i)=>`<details class="transcript-entry" ${i===m.transcripts.length-1?'open':''}><summary>Transcript ${i+1} · ${E(t.language||'mixed languages')} <small>${formatDate(t.at)}</small></summary><div class="transcript-text">${renderTranscript(t.text,t.assetId||recordings[0]?.id)}</div></details>`).join('')}</section>`:''}
@@ -151,7 +160,7 @@ function askView(){
 async function updateUsage(){try{const value=await storageUsage();const el=document.getElementById('storage-status');if(el)el.textContent=value?`${fmtSize(value.usage)} used · ${fmtSize(value.quota)} available quota · ${value.persisted?'persistent storage granted':'browser may clear data under pressure'}`:'Storage quota unavailable in this browser.';}catch{}}
 function settingsView(){
   return `${pageHeading('♧ FAMILY STEWARDSHIP','Keep them <em>safe. Keep them yours.</em>','No account. No cloud subscription. No tracking. Your family decides how stories are shared and preserved.')}
-  <div class="settings-grid"><section class="settings-card featured-setting"><div class="settings-card-icon">♧</div><div class="eyebrow">YOUR FAMILY'S DIGITAL HEIRLOOM</div><h2>Back up the whole grove.</h2><p>Download a password-protected archive containing the complete family history, all original recordings, videos, photographs, transcripts and timestamps. Keep copies in at least two safe places.</p><div class="setting-actions">${aButton('export-vault','↓ &nbsp; Download encrypted backup')}${aButton('merge-start','Import family updates ↗','btn btn-outline')}</div><p class="note">Anyone with the archive and passphrase can read it. Send the archive and passphrase separately.</p></section>
+  <div class="settings-grid"><section class="settings-card featured-setting"><div class="settings-card-icon">♧</div><div class="eyebrow">YOUR FAMILY'S DIGITAL HEIRLOOM</div><h2>Back up the whole grove.</h2><p>Download a password-protected archive containing the complete family history, all original recordings, videos, photographs, transcripts and timestamps. Keep copies in at least two safe places.</p><div class="setting-actions">${aButton('prepare-backup','Save to Files or a cloud drive')}${aButton('export-vault','Download backup','btn btn-outline')}${aButton('merge-start','Import family updates ↗','btn btn-outline')}</div><p class="note">Anyone with the archive and passphrase can read it. Send the archive and passphrase separately.</p></section>
   <section class="settings-card"><div class="settings-card-icon">♫</div><h3>Keep originals independently</h3><p>After recording, optionally save an unencrypted original to your device's Downloads. The app also saves an encrypted copy in the grove.</p><label class="switch-row"><span>Automatically download recordings</span><input id="auto-download" type="checkbox" ${state.autoDownload?'checked':''}><i></i></label><p class="note">Especially useful for priceless interviews. Back up those files yourself, too.</p></section>
   <section class="settings-card"><div class="settings-card-icon">❧</div><h3>Family exchange</h3><p>Send a trusted relative an encrypted copy. They can add stories on their own device and send updates back. Importing adds history, never replaces it.</p>${aButton('share-start','✉ &nbsp; Prepare family invitation','btn btn-outline')}<p class="note">This is file-based sharing, not a live invite link or automatic sync.</p></section>
   <section class="settings-card"><div class="settings-card-icon">▤</div><h3>Readable keepsake</h3><p>Export a human-readable Markdown book of names, stories, transcripts, timestamps and history. Media originals remain separately available from the encrypted archive.</p>${aButton('export-readable','↓ &nbsp; Download story book','btn btn-outline')}<p class="note warning-note">Readable exports are not encrypted. Keep them private.</p></section>
@@ -163,6 +172,13 @@ function dialogContent(){
   const d=state.dialog;
   let body='';let title='';let subtitle='';
   switch(d.type){
+    case 'backup-file':
+      title='Keep a second copy';
+      subtitle='This encrypted file contains your stories, photos and original recordings.';
+      body=`<p>Choose a cloud drive or copy the download there. On a new device, select “Open an existing backup” and enter your grove passphrase.</p>
+        <p class="note">Save a fresh copy after adding stories. Each backup includes changes up to the time you make it.</p>
+        <div class="setting-actions">${navigator.canShare?.({files:[d.file]})?aButton('share-backup-file','Choose where to save'):''}${aButton('save-backup-file','Download backup','btn btn-outline')}</div>`;
+      break;
     case 'person':title=d.id?'Add to their life':'Welcome another life';subtitle='A name is the beginning of a hundred stories.';{
       const p=state.data?.people.find(x=>x.id===d.id)||{};
       body=`<form data-form="person" class="form-stack"><label>Full name <span>*</span><input name="name" required value="${E(p.name||'')}" maxlength="100" placeholder="How should they be remembered?"></label><div class="two-fields"><label>Born (approximate is fine)<input name="born" value="${E(p.born||'')}" placeholder="e.g. 1948"></label><label>Passed away (optional)<input name="died" value="${E(p.died||'')}" placeholder="e.g. 2021"></label></div><label>A little about them<textarea name="bio" rows="4" placeholder="A beloved aunt, a wonderful cook, an explorer…">${E(p.bio||'')}</textarea></label>${d.id?`<label class="form-label">Reason for correction <input name="reason" placeholder="e.g. Confirmed year with family"></label>`:''}<button class="btn btn-primary wide" type="submit">${d.id?'Save another version':'✿ Add this person'} →</button></form>${d.id?`<div class="modal-foot-action"><label class="text-action">+ Add a portrait<input type="file" id="portrait-upload" accept="image/*" hidden></label></div>`:''}`;
@@ -357,7 +373,7 @@ async function handleAction(action,node){
     case 'lock':
       if(state.recorder?.state==='recording'||state.recordFinalizing)throw new Error('Stop the recording and let it finish saving before locking your grove.');
       if(state.failedRecording&&!confirm('An unsaved recording will be lost if you lock now. Save the original first. Continue?'))return;
-      state.key=null;state.data=null;state.setupError='unlock';clearUrls();render();break;
+      state.dialog=null;state.key=null;state.data=null;state.setupError='unlock';clearUrls();render();break;
     case 'new-memory':changeView('capture');break;
     case 'new-person':openDialog('person');break;
     case 'edit-person':openDialog('person',{id:state.dialog?.id});break;
@@ -390,6 +406,24 @@ async function handleAction(action,node){
       if(hi)hi.textContent=PROMPTS[state.promptIndex].hi;
     }break;
     case 'compose-ai':state.aiBusy=true;try{await localAIAnswer();}finally{state.aiBusy=false;}break;
+    case 'prepare-backup':{
+      const key=state.key;
+      await inspectVaultIntegrity(key);
+      const archive=await backupVault();
+      if(!key || state.key!==key)break;
+      const name=safeFilename(state.data.family.name)+'-'+dayStamp()+'.grove';
+      const file=new File([JSON.stringify(archive)],name,{type:'application/octet-stream'});
+      openDialog('backup-file',{file});
+    }break;
+    case 'save-backup-file':{
+      const file=state.dialog.file;
+      downloadBlob(file,file.name);
+      toast('Check Downloads for your archive, then keep a copy in your cloud drive.');
+    }break;
+    case 'share-backup-file':{
+      try{await navigator.share({files:[state.dialog.file]});}
+      catch(error){if(error.name!=='AbortError')toast('Use Download backup below to save the file.');}
+    }break;
     case 'export-vault':{
       await inspectVaultIntegrity(state.key);
       const archive=await backupVault();
