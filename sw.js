@@ -1,4 +1,4 @@
-const CACHE = 'memory-grove-shell-v4';
+const CACHE = 'memory-grove-shell-v5';
 const APP_SHELL = ['./', './index.html', './app.js', './db.js', './model.js', './crypto.js', './art.js', './styles.css', './painting.css', './assets/grove-miniature.svg', './assets/courtyard.webp', './manifest.webmanifest', './privacy.html', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-apple.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
@@ -14,9 +14,21 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
   event.respondWith((async () => {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    try { return await fetch(request); }
-    catch { if (request.mode === 'navigate') return (await caches.match('./index.html')) || Response.error(); return Response.error(); }
+    // Prefer the latest deployed app while online; retain offline support.
+    try {
+      const response = await fetch(request);
+      if (response.ok && response.type !== 'opaque') {
+        try {
+          const cache = await caches.open(CACHE);
+          await cache.put(request, response.clone());
+        } catch (_) { /* Cache limits must never block an online response. */ }
+      }
+      return response;
+    } catch (_) {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      if (request.mode === 'navigate') return (await caches.match('./index.html')) || Response.error();
+      return Response.error();
+    }
   })());
 });
