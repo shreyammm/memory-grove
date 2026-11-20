@@ -11,7 +11,7 @@ test('offline app shell and install icons are present',()=>{
  }
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert.equal(/<script[^>]+src=["']https:\/\//.test(html),false,'App scripts must remain local');
- assert.match(html,/connect-src[^"']*huggingface\.co/,'Only model downloads may need external fetches');
+ assert.match(html,/connect-src[^\"]*huggingface\.co/,'Only model downloads may need external fetches');
 
 });
 
