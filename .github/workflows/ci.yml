@@ -10,6 +10,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Build the optional private speech recognition module
+        run: |
+          npm install
+          npm run build
       - name: Verify encryption, archives, event history and PWA assets
         run: npm test
       - name: Browser QA tooling (CI only; no app runtime dependencies)
