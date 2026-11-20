@@ -1,0 +1,167 @@
+/* Memory Grove / The Family Manuscript
+   An original, flat, pigment-and-wasli-paper design inspired by Indian
+   miniature-painting composition: delicate double rules, folio borders,
+   indigo, verdigris, madder, saffron and warm paper. No remote assets. */
+:root {
+  --paper:#f7efdf;
+  --vellum:#f2e4cc;
+  --cream:#fff9ed;
+  --green:#2e5551;
+  --deep:#273e3d;
+  --sage:#769077;
+  --sage-light:#e9e9d8;
+  --ink:#34423d;
+  --light-ink:#647369;
+  --gold:#bf9356;
+  --terra:#a64f4f;
+  --border:#d4bf97;
+  --line:#e0d0b4;
+  --shadow:0 15px 28px rgba(52,46,34,.075);
+}
+body { background:var(--paper); }
+::selection { background:#d4b47c; color:#283c3b; }
+.main-wrap { background:var(--paper); }
+.sidebar {
+  background:#eee2ca;
+  border-right:3px double #cab28c;
+  padding-top:26px;
+}
+.sidebar:before { content:""; width:calc(100% - 36px); height:5px; position:absolute;top:9px;left:18px;
+  border-top:1px solid #b45051;border-bottom:1px solid #d1aa6f; }
+.brand-stamp { border-radius:3px; border:2px solid #a64f4f; background:#f6e8cb; color:#9b414c;
+  box-shadow:inset 0 0 0 3px #f6e8cb,inset 0 0 0 4px #d2a363; }
+.brand strong { letter-spacing:-.055em; font-size:22px; }
+.brand small { color:#9a4c4e; font-size:7px;letter-spacing:.12em; }
+.nav-caption { color:#9a6457; }
+.side-rule, .side-bottom { border-color:#d5c29c; }
+.nav-link { border-radius:0; color:#58685b; }
+.nav-link:hover { background:#e5d6b9; }
+.nav-link.active { background:#325751; color:#fff7df; border-left:3px solid #d9b16b; padding-left:10px; }
+.nav-link.active .nav-symbol { color:#f0c685; }
+.nav-symbol { color:#b07f59; }
+.topbar { border-bottom:2px solid #deceb0; background:#f8f0df; }
+.top-breadcrumb { color:#9d785a; }
+.top-breadcrumb span { color:#bf8b72; }
+.status { color:#667d68; }
+.round-action { border:1px solid #cbb791; background:#f7f0dd;border-radius:3px; }
+.btn { border-radius:2px; border-width:1px; font-weight:700; }
+.btn-primary,.btn-dark { background:#315550; border-color:#315550; color:#fff7e6; }
+.btn-primary:hover:not(:disabled),.btn-dark:hover:not(:disabled) { background:#244942; }
+.btn-outline { border-color:#b29b77; background:#fbf4e5; color:#315550; }
+.btn-outline:hover:not(:disabled) { background:#f1e0c4; }
+.eyebrow { color:#aa584c; letter-spacing:.20em; }
+h1,h2,h3 { letter-spacing:-.045em; }
+h1 em,h2 em,h3 em { color:#a6494b; }
+.text-action {color:#39645a; text-decoration-color:#c8a369;}
+.home-view {padding-top:44px;}
+.home-hero {grid-template-columns:minmax(0,40%) minmax(0,60%); align-items:center;min-height:0;}
+.hero-copy {padding:25px 25px 30px 0;}
+.hero-copy h1 {font-size:clamp(50px,5.1vw,79px);line-height:1.06;letter-spacing:-.06em;white-space:normal;}
+.hero-copy p {max-width:375px; color:#62685a;}
+.hero-foot { color:#aa7551;}
+.delicate-rule {color:#a64f4f;}
+.delicate-rule span {background:#cbb086;}
+.hero-painting {
+  aspect-ratio:900/690; min-height:0; height:auto; width:100%;
+  margin-left:0; overflow:hidden; border:1px solid #9d4b46; background:#a34449;
+  box-shadow:0 0 0 5px #f3e8d2,0 0 0 6px #bb985e;
+}
+.hero-painting:after {display:none;}
+.hero-painting .tree-svg {position:relative; inset:auto; width:100%;height:100%;max-width:none; object-fit:fill;display:block;}
+.painting-label,.paint-bottom {
+  color:#f6deaa; text-shadow:0 1px 1px #55323a;
+  font-size:8px;letter-spacing:.15em;left:53px;right:53px;
+}
+.painting-label {top:52px;}
+.painting-label span {color:#f6deaa;}
+.paint-bottom {bottom:53px;font-size:7px;color:#f6deaa;}
+.stats-band {margin-top:47px;border-top:2px double #bea67f;border-bottom:2px double #bea67f;background:#f8efdf;}
+.stats-band > div {border-right:1px solid #dcc8a5;}
+.stats-band strong {color:#335d54;}
+.stat-icon {color:#b15b51;}
+.home-lower {margin-top:48px;gap:30px;}
+.home-prompt {
+  background:#e6e9d6; border:1px solid #b9b88c;
+  outline:1px solid #d1c9a8;outline-offset:-8px;
+}
+.home-prompt:before {content:"✦";position:absolute;left:15px;bottom:10px;color:#b48650;opacity:.8;}
+.card-topline {color:#647963;}
+.prompt-art {opacity:.66;}
+.memory-row {border-bottom-color:#d9c8ab;}
+.row-flower {color:#a44a4f;}
+.tiny-bottom-quote {color:#a27955;}
+.page-heading:before {content:"❧  ·  ✽  ·  ❧";display:block;color:#bb895b;letter-spacing:.2em;margin-bottom:13px;font-size:12px;}
+.page-heading h1 {line-height:1.13;}
+.tree-portrait {background:#f4e6cb; border:2px solid #b88d65;box-shadow:inset 0 0 0 8px #f4e6cb,inset 0 0 0 9px #c5ad7f; min-height:0;padding-bottom:22px;}
+.tree-portrait:before {inset:14px;border-color:#d2b68a;}
+.tree-kicker {color:#a34e4a;}
+.tree-info {color:#766b56;}
+.tree-illustration {max-width:780px; margin:15px auto 0;padding:0 26px 6px;}
+.tree-illustration .tree-svg {width:100%;height:auto;margin-top:0;border:1px solid #bd8758;}
+.tree-seal {background:#f4dfb3;border-color:#ac7d58;outline-color:#d2af73;border-radius:50%; color:#2e554f;}
+.tree-note {color:#947356;}
+.branch-panel {background:#fff8ea;border-color:#d1bc92;}
+.branch-tile {border-color:#e2d1b4;}
+.branch-tile:hover,.branch-tile.chosen {background:#f1e8ce;}
+.branch-emblem {border-radius:2px; background:#f7eddb;}
+.person-chip {border-color:#d3ba95;background:#fff8e7;border-radius:2px;}
+.person-chip.selected {background:#315650;color:#fff4dd;}
+.story-card,.timeline-point,.settings-card,.branch-panel,.capture-form,.ask-panel,.relationship-section,.lineage-intro {
+  background:#fff8e9; border-color:#d8c19d;
+}
+.story-illustration {background:#e2e6d3;}
+.story-illustration:before {content:"";position:absolute;inset:8px;border:1px solid #b5b58c;pointer-events:none;}
+.story-branch {color:#a7524e;}
+.story-card:hover,.timeline-point:hover {box-shadow:0 7px 16px rgba(61,59,39,.08);}
+.timeline-intro {background:#e6e8d5;border-color:#bbb894;}
+.timeline-list {border-left-color:#b7a477;}
+.timeline-marker {background:#f3e1c2;border:1px solid #ad865a;color:#a44e54;border-radius:3px;}
+.modal {background:#fff8e9;border-color:#eee0c6;outline-color:#b98a60;}
+.modal-screen {background:#142f2cae;}
+input, select, textarea {accent-color:#a34c50;}
+.form-stack input,.form-stack select,.form-stack textarea {border-color:#d0bd9b;background:#fffdf5;}
+input:focus-visible,button:focus-visible,textarea:focus-visible,select:focus-visible {outline:2px solid #ae5350;outline-offset:2px;}
+.settings-card:before {content:"";position:absolute;inset:7px;border:1px solid #ebdcc3;pointer-events:none;}
+.featured-setting {background:#e8ead6;}
+.genealogy-scroll {background:#f8eed9;border-color:#d3b994;}
+.genealogy-card,.lineage-profile {background:#fff8e9;}
+.entry-page {background:#efe3cb;}
+.entry-frame {background:#fff8e8;border:1px solid #bca17a;box-shadow:none;}
+.entry-art {background:#a64a4d;border:10px solid #a64a4d;box-shadow:inset 0 0 0 1px #e9cb86;}
+.entry-art:before {inset:8px;border-color:#e6c185;}
+.entry-art .tree-svg {object-fit:cover; width:100%;height:100%;max-width:none;left:0;bottom:0;position:absolute;transform:none;}
+.entry-topline,.entry-art-bottom {background:#9c4148;color:#f5d7a0;border:1px solid #e3ba79;padding:7px 11px;letter-spacing:.12em;}
+.entry-topline {z-index:4;left:23px;right:auto;}
+.entry-art-bottom {z-index:4;bottom:22px;left:25px;}
+.entry-form {background:#fff8e8;}
+.entry-form h1 {line-height:1.1;}
+.entry-divider {color:#9c7158;}
+.unlock-card {background:#fff9eb;border:2px double #c7ac83;}
+.unlock-symbol {color:#a54c51;}
+.photo-masonry .album-tile {background:#fff8e7;border-color:#d7c3a6;}
+.app-footer {border-top-color:#d6c09e;color:#91816a;background:#f7edda;}
+@media (min-width:1300px){.hero-copy h1{font-size:clamp(60px,5.4vw,84px);}}
+@media (max-width:1120px){.home-hero {grid-template-columns:minmax(0,43%) minmax(0,57%);}.hero-copy h1 {font-size:clamp(42px,5vw,69px);}}
+@media (max-width:700px){
+ .sidebar {border-right:2px double #cbaa7c;}
+ .topbar {background:#f6ecd8;}
+ .home-view {padding-top:12px;}
+ .home-hero {display:flex;flex-direction:column;}
+ .hero-copy {padding:24px 0 28px;}
+ .hero-copy h1 {font-size:clamp(49px,12vw,69px);margin:14px 0;}
+ .hero-painting {height:auto;min-height:0;width:100%;aspect-ratio:900/690;margin:4px auto 0;box-shadow:0 0 0 3px #f2e4c9,0 0 0 4px #b6925d;}
+ .hero-painting .tree-svg {height:100%;width:100%;bottom:auto;position:relative;}
+ .painting-label,.paint-bottom {left:20px;right:20px;font-size:5px;}
+ .painting-label {top:23px;}.paint-bottom {bottom:22px;}
+ .stats-band {margin-top:26px;}
+ .home-lower {margin-top:36px;}
+ .home-prompt {min-height:265px;}
+ .tree-portrait {padding-bottom:13px;}
+ .tree-illustration {padding:0 8px 8px;margin-top:15px;}
+ .entry-art {height:290px;min-height:290px;}
+ .entry-art .tree-svg {width:100%;left:0;bottom:0;transform:none;}
+ .entry-topline {font-size:7px;top:10px;left:12px;padding:5px 7px;}
+ .entry-art-bottom {bottom:11px;left:12px;right:auto;font-size:8px;}
+ .entry-form {padding:31px 24px;}
+ .entry-form h1 {font-size:42px;}
+}
