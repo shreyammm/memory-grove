@@ -64,7 +64,7 @@ export function searchMemories(memories,query,people,branch='all',personId='all'
     return text.includes(q)||q.split(/\s+/).every(word=>text.includes(word));
   });
 }
-const CLUES={childhood:/child|schoolyard|grew up|बचपन|खेल|नानी घर/i,family:/family|mother|father|wedding|grandparent|marriage|प्यार|परिवार|शादी|माँ|पापा/i,learning:/learn|school|teacher|study|college|पढ़|स्कूल|सिख/i,work:/work|job|office|career|काम|नौकरी|दफ़्तर/i,journeys:/travel|journey|moved|train|city|migration|सफ़र|यात्रा|रेल|शहर/i,traditions:/festival|recipe|cook|diwali|holi|पूजा|त्योहार|खाना|होली|दिवाली/i,turning:/changed|decision|loss|turning|different|बदल|फ़ैसला/i,wisdom:/advice|remember|lesson|wish|life taught|सीख|सलाह|याद रखना/i};
+const CLUES={childhood:/child|schoolyard|grew up|bachpan|khelna|khelte|बचपन|खेल|नानी घर/i,family:/family|mother|father|wedding|grandparent|marriage|shaadi|parivaar|dadi|nani|mummy|papa|प्यार|परिवार|शादी|माँ|पापा/i,learning:/learn|school|teacher|study|college|padhai|padhne|पढ़|स्कूल|सिख/i,work:/work|job|office|career|naukri|daftar|kamai|काम|नौकरी|दफ़्तर/i,journeys:/travel|journey|moved|train|city|migration|safar|shehar|gaon|शहर|सफ़र|यात्रा|रेल|शहर/i,traditions:/festival|recipe|cook|diwali|holi|diwali|tyohar|pooja|rasoi|holi|पूजा|त्योहार|खाना|होली|दिवाली/i,turning:/changed|decision|loss|turning|different|faisla|badlav|बदल|फ़ैसला/i,wisdom:/advice|remember|lesson|wish|life taught|zindagi|seekh|salah|सीख|सलाह|याद रखना/i};
 export function suggestBranch(text){const matches=Object.entries(CLUES).map(([id,re])=>({id,count:(text.match(new RegExp(re.source,'gi'))||[]).length})).sort((a,b)=>b.count-a.count);return matches[0]?.count?matches[0].id:'wisdom';}
 export function sourceHits(data,query){
   const tokens=query.toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u).filter(t=>t.length>2);
@@ -124,4 +124,33 @@ export function followupFor(text,name='them') {
   if(year)return `What did a typical day look like around ${year}?`;
   if(source.trim().length>25)return 'What happened just before that, and how did you feel in the moment?';
   return `What is the first place ${name} remembers calling home?`;
+}
+
+
+// Timestamped virtual clips refer to the unmodified source recording.
+export function suggestTimedClips(segments,{minSeconds=25,maxSeconds=155}={}) {
+  if(!Array.isArray(segments))return [];
+  const items=segments.map(x=>({start:Number(x.start),end:Number(x.end),text:String(x.text||'').replace(/\s+/g,' ').trim()}))
+    .filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.start>=0&&x.end>x.start&&x.text).sort((a,b)=>a.start-b.start);
+  const clips=[];let group=[],category='wisdom';
+  const flush=()=>{
+    if(!group.length)return;
+    const text=group.map(x=>x.text).join(' ').trim();
+    const branch=category==='wisdom'?suggestBranch(text):category;
+    let title=text.split(/\s+/).slice(0,9).join(' ').replace(/[.?!।,;:]+$/,'');
+    if(title.length>76)title=title.slice(0,73)+'…';
+    clips.push({start:group[0].start,end:group[group.length-1].end,text,branch,title:title||branchFor(branch).name});
+    group=[];category='wisdom';
+  };
+  for(const seg of items){
+    const guess=suggestBranch(seg.text);
+    const change=group.length&&guess!==category&&guess!=='wisdom'&&category!=='wisdom'&&seg.start-group[0].start>=minSeconds;
+    const long=group.length&&seg.end-group[0].start>maxSeconds;
+    const gap=group.length&&seg.start-group[group.length-1].end>35;
+    if(change||long||gap)flush();
+    if(!group.length)category=guess;
+    else if(category==='wisdom'&&guess!=='wisdom')category=guess;
+    group.push(seg);
+  }
+  flush();return clips;
 }

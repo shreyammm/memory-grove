@@ -9,7 +9,10 @@ test('offline app shell and install icons are present',()=>{
  for(const file of ['./','./index.html','./app.js','./db.js','./model.js','./crypto.js','./art.js','./styles.css','./painting.css','./assets/grove-miniature.svg','./manifest.webmanifest','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-apple.png']){
   assert.ok(sw.includes(file));if(file!=='./')assert.ok(fs.existsSync(path.join(root,file)));
  }
- assert.equal(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('https://'),false);
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ assert.equal(/<script[^>]+src=["']https:\/\//.test(html),false,'App scripts must remain local');
+ assert.match(html,/connect-src[^\"]*huggingface\.co/,'Only model downloads may need external fetches');
+
 });
 
 test('Indian miniature visual assets are local, cohesive and parseable',()=>{

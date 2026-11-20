@@ -79,7 +79,9 @@ try{
   await page.locator('[data-draft=transcript]').fill('[00:03] I remember the lamps in our house.');
   await page.locator('#upload-photos').setInputFiles({name:'family-photo.png',mimeType:'image/png',buffer:png});
   await page.locator('[data-photo-caption]').first().fill('A family portrait');
-  await page.locator('#upload-media').setInputFiles({name:'original-voice.webm',mimeType:'audio/webm',buffer:Buffer.from('test-audio-bytes-1234567890')});
+  // Test the multi-chunk encryption path and round-trip through backup.
+  await page.locator('#auto-transcribe').uncheck();
+  await page.locator('#upload-media').setInputFiles({name:'long-voice.webm',mimeType:'audio/webm',buffer:Buffer.alloc(5*1024*1024,42)});
   await page.locator('.file-attached').first().waitFor({timeout:15000});
   if(browserType===chromium){
     await clickAction(page,'start-record');
@@ -119,7 +121,8 @@ try{
   assert.equal(json.includes('Nani and the monsoon'),false,'Backup must keep story content encrypted');
   assert.equal(json.includes('A family portrait'),false,'Backup must keep photo descriptions encrypted');
   assert.ok(exported.data.assets.length>=2);
-  log('Read-back integrity, encrypted export and no leaked plaintext');
+  assert.ok(exported.data.assets.some(row=>row.kind==='chunked'),'Encrypted backup must include a large-file manifest');
+  log('Read-back integrity, chunked original backup and no leaked plaintext');
   const b=await browser.newContext({viewport:{width:390,height:844},acceptDownloads:true});
   const restored=await open(b);
   await clickAction(restored,'restore-start');

@@ -1,6 +1,6 @@
 # ✿ Memory Grove
 
-**Our stories, still growing.** A free, illustrated, offline-first family oral-history PWA. Inspired by Indian miniature and storybook illustration. Private by default; no account, analytics, paid API, database server, subscription, app store, or build step is required.
+**Our stories, still growing.** A free, illustrated, offline-first family oral-history PWA. Inspired by Indian miniature and storybook illustration. Private by default; no account, analytics, paid API, database server, subscription, or app store is required. Optional local Whisper transcription needs a bundled dependency and a one-time model download.
 
 **Version:** 1.2 Indian miniature edition · release candidate · November 20, 2026 · MIT licensed
 
@@ -18,7 +18,7 @@
 3. In a modern browser on that same computer, visit `http://localhost:8000`.
 4. Choose a family name, the first person to remember, and a strong passphrase. Record your first story.
 
-No `npm install`, Expo Go, API key, or account is required. You must use a local web server or HTTPS (not directly open `index.html` as a file), because IndexedDB, service workers, camera/microphone and Web Crypto require appropriate browser security contexts.
+For the basic archive, no `npm install`, Expo Go, API key, or account is required. Optional automatic speech recognition requires `npm install && npm run build` for deployment. You must use a local web server or HTTPS (not directly open `index.html` as a file), because IndexedDB, service workers, camera/microphone and Web Crypto require appropriate browser security contexts.
 
 ### Put it on your iPhone at no cost
 
@@ -64,8 +64,8 @@ The public repository holds only application code and illustrations. **Never com
 | Timeline | Chronological story view per person (approximate dates welcome) |
 | Oral histories | Live audio **and** video recording through `MediaRecorder`, import audio/video, record multiple originals per story, save originals separately |
 | Photos | Import original full-resolution photos, caption each, attach to memories or profiles, photo-story prompts, browse album |
-| Transcripts | Hindi/English/other text, unlimited additional transcript versions, optional offline dictation where supported, timestamped lines like `[02:14]` that jump into the recording |
-| Moments and chapters | Hand-mark timestamp-linked moments in uncut recordings; offline suggestions group text into editable life chapters linked back to the original; optional browser-native on-device AI refinement |
+| Transcripts | Manual bilingual transcripts and optional in-browser Whisper transcription of imported media. The local model is downloaded on first use; device/browser support and long-file reliability vary. Timestamped lines jump into the original. |
+| Moments and chapters | In addition to manually marked moments, locally transcribed uploads create source-grounded virtual timestamp clips categorized under life-tree branches. Suggestions are heuristic and can be imperfect; the uncut original remains. |
 | Interviewing | English/Hindi question deck and contextual follow-up questions from existing typed words |
 | Search | Offline, multilingual exact-word retrieval across titles, people, story text, transcript passages, notes and timestamped clips |
 | Ask the Grove | Source-grounded passage retrieval with links back to originals; optional on-device summary **only** on browsers with an already-available local language model |
@@ -96,7 +96,7 @@ The optional browser `LanguageModel` API is experimental and often unavailable, 
 2. **No real invitation/role enforcement.** The archive passphrase controls access to its contents, but there are no online identities, invitation revocations, viewer/contributor permissions, or server-side authorization. Anyone with a decrypted copy and control of their device can change their own version. **Do not claim roles are securely enforced.**
 3. **Append-only application, not unbreakable history.** A person controlling device storage or an archive can delete or tamper with it outside the app. AES-GCM authenticates individual encrypted contents but cannot prevent an archive holder from deleting entire entries or re-encrypting data with a known passphrase. It is not a remotely anchored or digitally signed ledger.
 4. **No backup recovery service.** Clearing site data or losing device/storage can erase memories. There is no lost-passphrase recovery. The browser may evict stored data. Request persistent storage if available, but still export backups.
-5. **Browser quotas and working memory.** For reliability, individual media files/recorded segments are limited to **250 MB**, and opening archives above **1.2 GB** is blocked. Very large backups consume considerable temporary browser RAM; divide long interviews into multiple segments/stories and test your device.
+5. **Browser quotas and working memory.** For reliability, the recorder currently stops live capture at about **245 MB** per segment, but **imported files are encrypted in 4 MB chunks** without an arbitrary per-file cap. Storage quota and browser memory still limit real-world uploads; playback may load the complete decrypted original in memory. Opening `.grove` backups above **1.2 GB** remains unsupported, so giant uploads do **not** yet have a reliable portable archive/restore pathway. Keep independent originals and do not rely on this preview for irreplaceable large media.
 6. **Not a third-party security audit.** Web apps can change when a publisher updates the hosted source. Use a hosting account you trust. A compromised hosting origin, browser, extension, device or shared passphrase is outside what encryption alone can protect.
 7. **Not universal offline AI.** The free fallback is deterministic indexing/structure; local model/dictation integrations are only active where supported and installed. No external AI API is used.
 
@@ -135,3 +135,29 @@ The tests cover AES-GCM tampering/wrong passphrase, exact media bytes, encrypted
 ## License
 
 MIT. Designed as a free, noncommercial gift to help families preserve memories. No dependencies or third-party image/font assets are embedded.
+
+
+## Experimental long-interview processing branch (not yet production verified)
+
+This feature branch introduces optional local Whisper-based transcription for uploaded
+audio and video, timestamped virtual clips, life-branch suggestions, and chunked
+encryption for importing originals over 250 MB. The source recording remains intact.
+The bundled transcriber is generated with:
+
+```sh
+npm install
+npm run build
+```
+
+Deploy the resulting `dist/` through the configured Cloudflare Worker.
+A first-time model download (~120 MB) requires internet and available space; family
+media is not intentionally uploaded to the model provider. Actual iPhone Safari
+support, memory behavior for long videos, performance, and accuracy have not been
+validated. Processing currently requires leaving the app open. Long-media archive
+backup/restore still needs a streamable multi-volume redesign.
+
+**Cloud sign-in and automatic cross-device synchronization are not implemented.**
+The passphrase unlocks an archive already stored in the current browser; recovery on
+another device still requires an exported backup. Future user-owned Google Drive
+backup/sync would require an OAuth client, explicit consent, conflict-safe syncing
+and recovery testing. Do not market local unlocking as account-based sign-in.

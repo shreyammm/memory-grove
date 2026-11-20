@@ -25,4 +25,4 @@ await mkdir(output, { recursive: true });
 for (const filename of publicFiles) {
   await cp(join(root, filename), join(output, filename), { recursive: true });
 }
-console.log('Memory Grove static assets ready in dist/');
+console.log('Static assets staged. Bundling private transcription…');

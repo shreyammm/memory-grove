@@ -98,18 +98,59 @@ export async function loadEvents(key){
   const events=await Promise.all(raws.map(row=>decryptJSON(key,row)));
   return events.sort((a,b)=>a.at.localeCompare(b.at)||a.id.localeCompare(b.id));
 }
+// Segment large files before encryption. A multi-hour interview is still one
+// original; browser memory is bounded by the chunk size during ingestion.
+const ASSET_CHUNK_BYTES=4*1024*1024;
 export async function saveAsset(key,file){
   if(!file || !file.size) throw new Error('Choose a nonempty file.');
-  const id=randomId();const buffer=await file.arrayBuffer();
-  const encrypted=await encryptBytes(key,new Uint8Array(buffer));
-  await putRaw('assets',{id,...encrypted});
+  const id=randomId();
+  if(file.size<=ASSET_CHUNK_BYTES){
+    const encrypted=await encryptBytes(key,new Uint8Array(await file.arrayBuffer()));
+    await putRaw('assets',{id,...encrypted});
+  }else{
+    const count=Math.ceil(file.size/ASSET_CHUNK_BYTES),saved=[];
+    try{
+      for(let i=0;i<count;i++){
+        const bytes=new Uint8Array(await file.slice(i*ASSET_CHUNK_BYTES,(i+1)*ASSET_CHUNK_BYTES).arrayBuffer());
+        const encrypted=await encryptBytes(key,bytes);
+        const partId=id+':part:'+i;
+        await putRaw('assets',{id:partId,chunkOf:id,index:i,...encrypted});
+        saved.push(partId);
+      }
+      // Only expose a completed recording when every encrypted segment is durable.
+      await putRaw('assets',{id,kind:'chunked',parts:count,size:file.size});
+    }catch(error){
+      await Promise.all(saved.map(partId=>deleteRaw('assets',partId).catch(()=>{})));
+      throw new Error('Not enough reliable browser storage for this whole recording. Save the original elsewhere and retry. '+error.message);
+    }
+  }
   return {id,name:file.name||'Recording',mime:file.type||'application/octet-stream',size:file.size};
 }
 export async function loadAsset(key,id,mime='application/octet-stream'){
   const raw=await getRaw('assets',id);
   if(!raw) throw new Error('Original media not found on this device. Restore a backup containing it.');
-  const bytes=await decryptBytes(key,raw);
-  return new Blob([bytes],{type:mime});
+  if(raw.kind!=='chunked'){
+    return new Blob([await decryptBytes(key,raw)],{type:mime});
+  }
+  const chunks=[];let total=0;
+  for(let i=0;i<raw.parts;i++){
+    const part=await getRaw('assets',id+':part:'+i);
+    if(!part)throw new Error('An encrypted recording segment is missing. Restore a verified archive.');
+    const plain=await decryptBytes(key,part);
+    chunks.push(plain);total+=plain.byteLength;
+  }
+  if(total!==raw.size)throw new Error('Original recording size verification failed.');
+  return new Blob(chunks,{type:mime});
+}
+// This only removes unfinished, unreferenced chunks after a failed import.
+async function deleteRaw(name,id){
+  const db=await database();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction(name,'readwrite');
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error||new Error('Could not clean up a failed upload.'));
+    tx.objectStore(name).delete(id);
+  });
 }
 export async function backupVault(){
   const [meta,events,assets,drafts,preferences]=await Promise.all([getMeta(),allRaw('events'),allRaw('assets'),allRaw('drafts'),allRaw('preferences')]);
@@ -123,8 +164,19 @@ function validateArchive(data){
     if(!Array.isArray(rows))throw new Error('Archive contains an invalid collection.');
     if(new Set(rows.map(r=>r?.id)).size!==rows.length)throw new Error('Duplicate entries in archive.');
     for(const row of rows){
-      if(typeof row?.id!=='string'||!row.id||typeof row.data!=='string'||!row.data||typeof row.iv!=='string'||!row.iv)throw new Error('Archive contains an invalid encrypted record.');
+      if(name==='assets'&&row?.kind==='chunked'){
+        if(!Number.isSafeInteger(row.parts)||row.parts<1||!Number.isSafeInteger(row.size)||row.size<1)throw new Error('Invalid chunked original in archive.');
+      }else if(typeof row?.id!=='string'||!row.id||typeof row.data!=='string'||!row.data||typeof row.iv!=='string'||!row.iv){
+        throw new Error('Archive contains an invalid encrypted record.');
+      }
       if(name==='privatePreferences'&&!row.id.startsWith('private-'))throw new Error('Archive has an invalid private preference.');
+    }
+  }
+  const assetIds=new Set(data.assets.map(row=>row.id));
+  for(const asset of data.assets){
+    if(asset.kind==='chunked')for(let i=0;i<asset.parts;i++){
+      const key=asset.id+':part:'+i;
+      if(!assetIds.has(key))throw new Error('Backup is missing an encrypted recording segment.');
     }
   }
   return data;
@@ -149,7 +201,7 @@ export async function restoreArchive(data,passphrase){
     const asset=evt.type==='memory.attach'?evt.payload?.asset:evt.type==='person.photo'?evt.payload?.asset:null;
     if(asset?.id&&!originalIds.has(asset.id))throw new Error('The archive is missing original media referenced by a family memory.');
   }
-  for(const row of data.assets)await decryptBytes(key,row);
+  for(const row of data.assets)if(row.kind!=='chunked')await decryptBytes(key,row);
   for(const row of (data.drafts||[]))await decryptJSON(key,row);
   for(const row of (data.privatePreferences||[]))await decryptJSON(key,row);
   // Meta, media, events, drafts and private settings commit together or not at all.
@@ -168,10 +220,18 @@ export async function mergeArchive(data,sourcePassword,targetKey){
     else events.push({id:row.id,...await encryptJSON(targetKey,plain)});
   }
   for(const row of data.assets){
-    const plain=await decryptBytes(sourceKey,row);
     const existing=await getRaw('assets',row.id);
-    if(existing){const old=await decryptBytes(targetKey,existing);if(old.length!==plain.length || old.some((v,i)=>v!==plain[i]))throw new Error('A conflicting original media file was detected. The merge was cancelled.');}
-    else assets.push({id:row.id,...await encryptBytes(targetKey,plain)});
+    if(row.kind==='chunked'){
+      if(existing && (existing.kind!=='chunked'||existing.size!==row.size||existing.parts!==row.parts))throw new Error('Conflicting recording metadata.');
+      if(!existing)assets.push({...row});
+      continue;
+    }
+    const plain=await decryptBytes(sourceKey,row);
+    if(existing){
+      if(existing.kind==='chunked')throw new Error('Conflicting original media kind.');
+      const old=await decryptBytes(targetKey,existing);
+      if(old.length!==plain.length || old.some((v,i)=>v!==plain[i]))throw new Error('A conflicting original media segment was detected. The merge was cancelled.');
+    }else assets.push({id:row.id,...(row.chunkOf?{chunkOf:row.chunkOf,index:row.index}:{}),...await encryptBytes(targetKey,plain)});
   }
   // Both new original files and all contributed events are committed atomically.
   await atomicAdd({assets,events});
@@ -187,17 +247,27 @@ export async function inspectVaultIntegrity(key){
     const asset=evt.type==='memory.attach'?evt.payload?.asset:evt.type==='person.photo'?evt.payload?.asset:null;
     if(asset?.id)references.set(asset.id,asset.size);
   }
-  const assetIds=new Set();
+  const assetIds=new Set(assetRows.map(row=>row.id));
+  const partsByParent=new Map();
   for(const row of assetRows){
-    if(assetIds.has(row.id))throw new Error('Duplicate original media ID.');
-    assetIds.add(row.id);
+    if(row.kind==='chunked')continue;
     const bytes=await decryptBytes(key,row);
-    const expected=references.get(row.id);
-    if(expected!==undefined&&Number(expected)!==bytes.byteLength)throw new Error('An original file differs in size from its archived description.');
     totalBytes+=bytes.byteLength;
+    if(row.chunkOf)partsByParent.set(row.chunkOf,(partsByParent.get(row.chunkOf)||0)+bytes.byteLength);
+    else {
+      const expected=references.get(row.id);
+      if(expected!==undefined&&Number(expected)!==bytes.byteLength)throw new Error('An original differs in size from its saved description.');
+    }
+  }
+  for(const row of assetRows){
+    if(row.kind!=='chunked')continue;
+    for(let i=0;i<row.parts;i++)if(!assetIds.has(row.id+':part:'+i))throw new Error('A recording segment is missing.');
+    if(partsByParent.get(row.id)!==row.size)throw new Error('A multi-segment original failed its size verification.');
+    const expected=references.get(row.id);
+    if(expected!==undefined&&expected!==row.size)throw new Error('An original file size differs from its history record.');
   }
   for(const id of references.keys())if(!assetIds.has(id))throw new Error('A story refers to an original file that is missing. Do not rely on this vault as a complete backup.');
-  return {events:eventRows.length,assets:assetRows.length,bytes:totalBytes};
+  return {events:eventRows.length,assets:assetRows.filter(row=>row.kind==='chunked'||!row.chunkOf).length,bytes:totalBytes};
 }
 export async function storageUsage(){
   if(!navigator.storage?.estimate)return null;

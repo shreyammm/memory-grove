@@ -1,10 +1,10 @@
 import {newVault,unlockVault,randomId} from './crypto.js';
 import {database,hasVault,getMeta,initializeVault,createFamilyVault,getPreference,setPreference,getPrivatePreference,setPrivatePreference,saveDraft,readDraft,clearDraft,appendEvent,appendEventBatch,loadEvents,saveAsset,loadAsset,backupVault,readArchive,restoreArchive,mergeArchive,inspectVaultIntegrity,storageUsage} from './db.js';
-import {BRANCHES,PROMPTS,branchFor,projectEvents,searchMemories,suggestBranch,suggestChapters,sourceHits,parseTranscriptSegments,followupFor,formatTime,formatDate} from './model.js';
+import {BRANCHES,PROMPTS,branchFor,projectEvents,searchMemories,suggestBranch,suggestChapters,sourceHits,parseTranscriptSegments,suggestTimedClips,followupFor,formatTime,formatDate} from './model.js';
 import {treeArt,miniPlant,ornaments} from './art.js';
 
 const app=document.getElementById('app');
-const state={key:null,view:'home',data:null,selectedPerson:'',memoryId:'',search:'',branch:'all',personFilter:'all',dialog:null,toast:'',busy:false,autoDownload:false,actor:'A family member',language:'both',capture:{},recorder:null,stream:null,recordFinalizing:false,recordStarted:0,recordTimer:null,recordFile:null,recordAsset:null,recordAssets:[],failedRecording:null,recordMode:'audio',photoFiles:[],uploadedFile:null,uploadedAsset:null,uploadedAssets:[],photoAssets:[],draftTimer:null,answer:'',answerQuery:'',answerSources:[],chapterSuggestions:[],restoreFile:null,shareFile:null,setupError:'',aiBusy:false,installPrompt:null};
+const state={key:null,view:'home',data:null,selectedPerson:'',memoryId:'',search:'',branch:'all',personFilter:'all',dialog:null,toast:'',busy:false,autoDownload:false,actor:'A family member',language:'both',capture:{},recorder:null,stream:null,recordFinalizing:false,recordStarted:0,recordTimer:null,recordFile:null,recordAsset:null,recordAssets:[],failedRecording:null,recordMode:'audio',transcription:null,transcriptionCancel:null,autoTranscribe:true,photoFiles:[],uploadedFile:null,uploadedAsset:null,uploadedAssets:[],photoAssets:[],draftTimer:null,answer:'',answerQuery:'',answerSources:[],chapterSuggestions:[],restoreFile:null,shareFile:null,setupError:'',aiBusy:false,installPrompt:null};
 const fileUrls=new Map();
 const icons={home:'⌂',tree:'♧',family:'♧',archive:'▤',record:'◉',album:'▧',ask:'✧',people:'♙',settings:'⚙',lock:'♧',back:'←',plus:'+',mic:'◉',video:'▣',camera:'▧',download:'↓',arrow:'↗',flower:'✿',book:'▤',audio:'♫'};
 const E = value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -76,11 +76,15 @@ function treesView(){
   const people=state.data.people;
   const chosen=people.find(p=>p.id===state.selectedPerson)||people[0];
   const stories=state.data.memories.filter(m=>m.personIds?.includes(chosen?.id));
+  const clips=stories.flatMap(memory=>(memory.moments||[]).filter(moment=>moment.assetId&&moment.branch)
+    .map(moment=>({memory,moment})));
+  const displayedClips=state.branch==='all'?clips:clips.filter(x=>x.moment.branch===state.branch);
   return `${pageHeading('✿ THE LIVING ARCHIVE','One life, <em>many branches.</em>','Every person has a tree. Each memory becomes a bloom, and the tree grows with every story.',aButton('new-person','+ Add a person','btn btn-outline'))}<div class="person-strip">${people.map(p=>`<button data-person-tree="${p.id}" class="person-chip ${chosen?.id===p.id?'selected':''}">${personAvatar(p,'small')} ${E(p.name)}</button>`).join('')}</div>
   <div class="tree-workspace"><div class="tree-portrait"><div class="tree-kicker">THE LIFE TREE OF</div><h2>${E(chosen?.name||'Your loved one')}</h2><div class="tree-info">${E(chosen?.born||'')} ${chosen?.born&&chosen?.died?'–':''} ${E(chosen?.died||'')} ${chosen?.bio?`<span>·</span> ${E(chosen.bio)}`:''}</div><div class="tree-illustration">${treeArt({seed:10})}<div class="tree-seal">${stories.length} ${stories.length===1?'memory':'memories'}<small>and growing</small></div></div><div class="tree-note">✿ &nbsp; Choose a branch to discover the stories growing there.</div></div>
-  <div class="branch-panel"><div class="eyebrow">EIGHT CHAPTERS OF A LIFE</div><h3>Follow a branch</h3><div class="branch-grid">${BRANCHES.map(b=>{const n=stories.filter(m=>m.branch===b.id).length;return `<button class="branch-tile ${state.branch===b.id?'chosen':''}" data-branch-tree="${b.id}"><span class="branch-emblem" style="--flower:${b.color}">${b.symbol}</span><span class="branch-text"><b>${b.name}</b><small>${E(b.hindi)} &nbsp; · &nbsp; ${n} ${n===1?'story':'stories'}</small></span><span class="branch-arrow">→</span></button>`;}).join('')}</div></div></div>
+  <div class="branch-panel"><div class="eyebrow">EIGHT CHAPTERS OF A LIFE</div><h3>Follow a branch</h3><div class="branch-grid">${BRANCHES.map(b=>{const n=stories.filter(m=>m.branch===b.id).length+clips.filter(x=>x.moment.branch===b.id).length;return `<button class="branch-tile ${state.branch===b.id?'chosen':''}" data-branch-tree="${b.id}"><span class="branch-emblem" style="--flower:${b.color}">${b.symbol}</span><span class="branch-text"><b>${b.name}</b><small>${E(b.hindi)} &nbsp; · &nbsp; ${n} ${n===1?'story':'stories'}</small></span><span class="branch-arrow">→</span></button>`;}).join('')}</div></div></div>
   <div class="section-title tree-stories"><div><div class="eyebrow">BLOOMS ON THIS TREE</div><h2>${state.branch==='all'?'All of '+firstName(chosen?.name)+"'s stories":branchFor(state.branch).name}</h2></div>${state.branch!=='all'?aButton('clear-branch','View all branches','text-action'):''}</div>
-  <div class="story-grid">${(state.branch==='all'?stories:stories.filter(m=>m.branch===state.branch)).length?(state.branch==='all'?stories:stories.filter(m=>m.branch===state.branch)).map(memoryCard).join(''):empty('This branch is ready to bloom','Add a story to bring this part of the tree to life.',viewButton('capture','Add a memory','btn btn-outline'))}</div>`;
+  <div class="story-grid">${(state.branch==='all'?stories:stories.filter(m=>m.branch===state.branch)).length?(state.branch==='all'?stories:stories.filter(m=>m.branch===state.branch)).map(memoryCard).join(''):empty('This branch is ready to bloom','Add a story to bring this part of the tree to life.',viewButton('capture','Add a memory','btn btn-outline'))}</div><div class="section-title tree-stories"><div><div class="eyebrow">MOMENTS FROM LONG INTERVIEWS</div><h2>Listen by chapter</h2></div></div>
+  <div class="story-grid">${displayedClips.length?displayedClips.map(({memory,moment})=>`<button class="story-card clip-card" data-detail="${memory.id}" data-detail-asset="${E(moment.assetId)}" data-detail-start="${moment.start}" data-detail-end="${moment.end}"><div class="story-content"><div class="story-branch">${branchFor(moment.branch).symbol} ${branchFor(moment.branch).name} · ${formatTime(moment.start)}–${formatTime(moment.end)}</div><h3>${E(moment.title)}</h3><p>${E((moment.text||'').slice(0,180))}</p><div class="story-meta">From ${E(memory.title)} <span>▶ Listen ↗</span></div></div></button>`).join(''):empty('No time-linked clips on this branch yet','Import and transcribe an interview, or mark a timestamped moment in a memory.')}</div>`;
 }
 function memoryCard(m){
   const image=m.attachments.find(a=>a.mime?.startsWith('image/'));
@@ -124,8 +128,9 @@ function captureView(){
   const c=state.capture;
   const linkedRecordings=[...state.recordAssets,...state.uploadedAssets].filter(a=>a.mime?.startsWith('audio/')||a.mime?.startsWith('video/'));
   return `${pageHeading('◉ PRESERVE A MOMENT','Every story <em>begins somewhere.</em>','Record a voice, film a conversation, write down a memory, or gather photographs. You can mix them together.')}<div class="capture-layout"><div class="capture-form"><div class="section-counter">01 / THE STORY <small class="draft-state" id="draft-save-hint">Drafts save privately as you type</small></div><div class="form-stack"><label>Give this memory a title <span>*</span><input data-draft="title" value="${E(c.title||'')}" placeholder="e.g. Nani's first Diwali in Delhi" maxlength="180"></label><label>Whose story is this? <span>*</span></label><div class="person-checks">${personChecks(c.personIds||[state.selectedPerson])}</div><div class="two-fields"><label>A chapter of life<select data-draft="branch">${branchSelect(c.branch||'childhood')}</select></label><label>When did it happen?<input data-draft="dateLabel" value="${E(c.dateLabel||'')}" placeholder="e.g. Summer 1972, or around 1990"></label></div><label>Where did it happen?<input data-draft="location" value="${E(c.location||'')}" placeholder="A city, a home, a village, anywhere"></label><label>Tell the story (optional)<textarea data-draft="story" rows="6" placeholder="Write naturally. Tell it in English, Hindi, or any language you love…">${E(c.story||'')}</textarea></label><label>Keywords or traditions (optional)<input data-draft="tags" value="${E(c.tags||'')}" placeholder="e.g. Holi, childhood, Lucknow (comma separated)"></label></div>
-  <div class="section-counter second-counter">02 / THE ORIGINAL MOMENT</div><div class="recorder-card"><div class="record-heading"><span class="record-ring">◉</span><div><h3>Keep their voice.</h3><p>Audio and video are preserved as their original files, encrypted on this device.</p></div></div><div class="mode-switch"><button data-mode="audio" class="${state.recordMode==='audio'?'selected':''}">♫ &nbsp; Voice recording</button><button data-mode="video" class="${state.recordMode==='video'?'selected':''}">▣ &nbsp; Video recording</button></div><div class="record-deck"><div class="record-wave ${state.recorder?.state==='recording'?'live':''}">${Array.from({length:29},(_,i)=>`<i style="--h:${12+((i*19)%43)}px;--delay:${i*43}ms"></i>`).join('')}</div><div class="record-status" id="record-status">${state.recorder?.state==='recording'?'Recording · 0:00':state.recordAssets.length?'Recording safely preserved for this story':'Ready when you are'}</div><div class="record-actions">${state.recorder?.state==='recording'?aButton('stop-record','■ &nbsp; Stop recording','btn btn-record stop'):aButton('start-record',state.recordAssets.length?'◉ &nbsp; Record another':'◉ &nbsp; Start recording','btn btn-record')}</div>${state.recordAssets.map(a=>`<p class="file-attached">✓ ${E(a.name)} (${fmtSize(a.size)}) <button data-action="download-record" data-original-asset="${a.id}" class="text-action">↓ Save original</button></p>`).join('')}${state.failedRecording?`<p class="record-failed">⚠ The recording could not be encrypted. Download the original immediately. <button data-action="recover-record" class="btn btn-outline btn-small">↓ Save unencrypted original</button> <button data-action="dismiss-failed-record" class="text-action">I saved it elsewhere — continue</button></p>`:''}</div><label class="file-attach">Or add an existing recording <input id="upload-media" type="file" accept="audio/*,video/*" multiple hidden><span>Browse voice notes or videos ↗</span></label>${state.uploadedAssets.map(a=>`<p class="file-attached">✓ ${E(a.name)} (${fmtSize(a.size)})</p>`).join('')}</div>
+  <div class="section-counter second-counter">02 / THE ORIGINAL MOMENT</div><div class="recorder-card"><div class="record-heading"><span class="record-ring">◉</span><div><h3>Keep their voice.</h3><p>Audio and video are preserved as their original files, encrypted on this device.</p></div></div><div class="mode-switch"><button data-mode="audio" class="${state.recordMode==='audio'?'selected':''}">♫ &nbsp; Voice recording</button><button data-mode="video" class="${state.recordMode==='video'?'selected':''}">▣ &nbsp; Video recording</button></div><div class="record-deck"><div class="record-wave ${state.recorder?.state==='recording'?'live':''}">${Array.from({length:29},(_,i)=>`<i style="--h:${12+((i*19)%43)}px;--delay:${i*43}ms"></i>`).join('')}</div><div class="record-status" id="record-status">${state.recorder?.state==='recording'?'Recording · 0:00':state.recordAssets.length?'Recording safely preserved for this story':'Ready when you are'}</div><div class="record-actions">${state.recorder?.state==='recording'?aButton('stop-record','■ &nbsp; Stop recording','btn btn-record stop'):aButton('start-record',state.recordAssets.length?'◉ &nbsp; Record another':'◉ &nbsp; Start recording','btn btn-record')}</div>${state.recordAssets.map(a=>`<p class="file-attached">✓ ${E(a.name)} (${fmtSize(a.size)}) <button data-action="download-record" data-original-asset="${a.id}" class="text-action">↓ Save original</button></p>`).join('')}${state.failedRecording?`<p class="record-failed">⚠ The recording could not be encrypted. Download the original immediately. <button data-action="recover-record" class="btn btn-outline btn-small">↓ Save unencrypted original</button> <button data-action="dismiss-failed-record" class="text-action">I saved it elsewhere — continue</button></p>`:''}</div><label class="file-attach">Or add an existing recording <input id="upload-media" type="file" accept="audio/*,video/*" multiple hidden><span>Browse voice notes or videos ↗</span></label><p class="note warning-note">Large videos can be imported in encrypted chunks, but this preview cannot yet restore a .grove backup larger than 1.2 GB. Keep the original video in Files or another independent backup. Available browser space and playback memory still matter.</p>${state.uploadedAssets.map(a=>`<p class="file-attached">✓ ${E(a.name)} (${fmtSize(a.size)})</p>`).join('')}</div>
   <div class="photo-attachment"><div class="attachment-icon">▧</div><div><b>Add photographs</b><p>Preserve full-resolution originals. Old and new photos are welcome.</p><label class="text-action photo-picker">+ Choose photographs<input id="upload-photos" type="file" accept="image/*" multiple hidden></label>${state.photoAssets.length?`<small class="photo-names">${state.photoAssets.length} photo(s) encrypted and added to this draft</small><div class="draft-photo-grid">${state.photoAssets.map(a=>`<div><img data-asset-src="${a.id}" alt="Photo prepared for this memory"><input data-photo-caption="${a.id}" value="${E(a.caption||'')}" placeholder="Who, where, when?" aria-label="Photo caption"></div>`).join('')}</div><p class="photo-interview">✧ Photo interview: Who is in the picture? What happened just before it was taken? Who else might remember?</p>`:''}</div></div>
+  <div class="transcription-option"><label><input id="auto-transcribe" type="checkbox" ${state.autoTranscribe?'checked':''}> Transcribe imported audio/video locally and suggest timestamped tree clips</label><p class="note">First use downloads a speech model (about 120 MB). Audio is processed on your device, not sent to our servers. Keep this page open while it runs; slow or memory-limited phones may be unable to complete it.</p>${state.transcription?`<div class="transcription-progress" role="status"><b>${E(state.transcription.status||'Processing interview…')}</b>${state.transcription.running?`<button data-action="cancel-transcription" class="text-action">Stop processing</button>`:''}</div>`:''}${c.autoTranscripts?.length?`<p class="file-attached">✓ ${c.autoTranscripts.reduce((sum,x)=>sum+x.segments.length,0)} timestamped transcript passages ready. Clips will appear in the life trees after you plant this memory.</p>`:''}</div>
   <div class="section-counter second-counter">03 / THE WORDS THEY SPOKE</div><div class="form-stack"><label>Transcript (optional)<textarea data-draft="transcript" rows="6" placeholder="Add the spoken words here, in Hindi, English, or both. You can also add a transcript later.">${E(c.transcript||'')}</textarea></label><div class="transcript-tools"><select data-draft="language" aria-label="Transcript language"><option value="both" ${c.language==='both'?'selected':''}>Hindi + English</option><option value="en" ${c.language==='en'?'selected':''}>English</option><option value="hi" ${c.language==='hi'?'selected':''}>हिन्दी</option><option value="other" ${c.language==='other'?'selected':''}>Other language</option></select>${aButton('dictate-local','✧ Try private on-device dictation','btn btn-outline btn-small')}</div>${linkedRecordings.length?`<label class="form-label">Which original recording do these timestamps refer to?<select data-draft="transcriptAssetId"><option value="">First available recording</option>${opts(linkedRecordings.map(a=>({value:a.id,label:a.name})),c.transcriptAssetId||'')}</select></label>`:''}<p class="note">For time-linked transcripts, begin lines with timestamps like [02:14] or [01:02:14]. They become links into the original recording. Local dictation works only where your browser supports offline speech recognition. Otherwise type or paste a transcript. Nothing is silently sent to a transcription server.</p></div>
   <div class="capture-submit"><div><b>Nothing gets lost in an edit.</b><small>Original media and the first telling stay intact. Future changes create additional history.</small></div>${aButton('save-memory','✿ &nbsp; Plant this memory','btn btn-primary',state.busy?'disabled':'')}</div></div><aside class="capture-aside"><div class="prompt-box"><div class="eyebrow">✿ A CONVERSATION STARTER</div><h3>Not sure where to begin?</h3><div class="prompt-quote">“${E(PROMPTS[(new Date().getDay()+3)%PROMPTS.length].en)}”</div><span>${E(PROMPTS[(new Date().getDay()+3)%PROMPTS.length].hi)}</span>${aButton('next-prompt','Another question ↻','text-action')} ${aButton('followup','✧ Follow-up from this story','text-action')}</div><div class="side-story-note">${miniPlant()}<h3>Let them wander.</h3><p>Some of the loveliest memories start as tangents. Record the whole conversation, then add the moments and chapters you discover afterward.</p></div><div class="safety-box">♧ &nbsp; <b>Protected as you go</b><p>Your recordings live inside your encrypted grove. Turn on automatic original downloads in Privacy & keepsakes for a second copy after each recording.</p></div></aside></div>`;
 }
@@ -246,7 +251,9 @@ function openDialog(type,extra={}){state.dialog={type,...extra};render();}
 function changeView(view){if(state.recordFinalizing){toast('Finishing your recording first. Please try again once it is preserved.');return;}if(state.recorder?.state==='recording'&&!confirm('A recording is in progress. Leave this page and stop it?'))return;if(state.recorder?.state==='recording')stopRecording();state.view=view;state.dialog=null;if(view==='capture'&&!state.capture.personIds)state.capture={branch:'childhood',personIds:[state.selectedPerson],language:'both'};render();window.scrollTo({top:0,behavior:'instant'});}
 function showDetail(id){state.memoryId=id;state.dialog=null;state.view='detail';render();window.scrollTo(0,0);}
 function activeRecordFile(){return state.recordFile||state.uploadedFile;}
-async function ensureFileSize(file){if(file.size>250*1024*1024)throw new Error(`“${file.name}” is more than 250 MB. Divide very long recordings into smaller files for reliable browser storage.`);}
+async function ensureFileSize(file){const available=await storageUsage();
+  if(available?.quota && available.quota-available.usage < file.size*1.65)
+    throw new Error('This device appears to have insufficient browser storage for the whole original. Keep the original in Files or your cloud drive and free up storage before importing.');}
 async function startRecording(){
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Recording is unavailable here. Open the PWA via HTTPS on a supported browser, or upload a recording.');
   if(state.recorder?.state==='recording'||state.recordFinalizing)throw new Error('The last recording is still being saved. Finish that save before starting another.');
@@ -281,14 +288,53 @@ async function startRecording(){
 }
 function stopRecording(){if(state.recorder?.state==='recording')state.recorder.stop();}
 function refreshRecordIndicator(){const el=document.getElementById('record-status');if(el&&state.recorder?.state==='recording')el.textContent=`● Recording · ${formatTime((Date.now()-state.recordStarted)/1000)}`;}
+async function transcribeImportedOriginal(file,asset){
+  if(!state.autoTranscribe)return;
+  state.transcription={running:true,status:'Preparing private speech recognition…',assetId:asset.id};
+  render();
+  let session;
+  try{
+    const {startLocalTranscription}=await import('./transcriber.js');
+    session=startLocalTranscription(file,({stage,progress})=>{
+      if(state.transcription?.assetId!==asset.id)return;
+      const percentage=Number(progress);
+      const formatted=Number.isFinite(percentage)?' · '+Math.round(percentage<=1?percentage*100:percentage)+'%':'';
+      state.transcription.status=(stage||'Transcribing')+formatted;
+      const node=document.querySelector('.transcription-progress b');
+      if(node)node.textContent=state.transcription.status;
+    });
+    state.transcriptionCancel=()=>session.cancel();
+    const segments=[];
+    for await(const part of session.segments){
+      if(!Number.isFinite(Number(part.start))||!Number.isFinite(Number(part.end))||!part.text?.trim())continue;
+      segments.push({start:Number(part.start),end:Number(part.end),text:part.text.trim()});
+      if(segments.length%5===0){
+        state.transcription.status='Transcribed '+segments.length+' timestamped passages…';
+        const node=document.querySelector('.transcription-progress b');if(node)node.textContent=state.transcription.status;
+      }
+    }
+    if(!segments.length)throw new Error('No intelligible speech was found. Your original is still saved.');
+    const saved=state.capture.autoTranscripts||[];
+    state.capture.autoTranscripts=[...saved.filter(x=>x.assetId!==asset.id),{assetId:asset.id,segments}];
+    await persistDraft();
+    state.transcription={running:false,status:'✓ Transcript and topic clips ready for '+asset.name,assetId:asset.id};
+    toast('✓ Interview transcribed locally. The chapter clips will be saved with this memory.');
+  }catch(err){
+    state.transcription={running:false,status:'Transcription unavailable: '+(err.message||'unsupported device')+'. The original was saved; a transcript can be added manually.',assetId:asset.id};
+  }finally{
+    state.transcriptionCancel=null;
+    session?.dispose?.();
+    render();
+  }
+}
 async function saveMemory(){
   if(state.busy)return;
-  if(state.recorder?.state==='recording'||state.recordFinalizing)throw new Error('Stop your recording and let it finish saving before planting this story.');
+  if(state.recorder?.state==='recording'||state.recordFinalizing||state.transcription?.running)throw new Error('Finish or stop transcription and recording before planting this story.');
   if(state.failedRecording)throw new Error('A recording could not be stored. Save its original and resolve the failed recording before publishing.');
   const c=state.capture;const title=(c.title||'').trim();const people=c.personIds||[];
   if(!title)throw new Error('Give this memory a title before planting it.');
   if(!people.length)throw new Error('Choose at least one person whose story this is.');
-  if(!c.story?.trim()&&!c.transcript?.trim()&&!state.recordAssets.length&&!state.uploadedAssets.length&&!state.photoAssets.length)throw new Error('Add a story, photograph, voice recording, video or transcript.');
+  if(!c.story?.trim()&&!c.transcript?.trim()&&!c.autoTranscripts?.length&&!state.recordAssets.length&&!state.uploadedAssets.length&&!state.photoAssets.length)throw new Error('Add a story, photograph, voice recording, video or transcript.');
   state.busy=true;
   try{
     const mId=randomId();
@@ -299,9 +345,17 @@ async function saveMemory(){
     for(const asset of state.photoAssets)assets.push(asset);
     const items=[{type:'memory.create',payload},...assets.map(asset=>({type:'memory.attach',payload:{id:mId,asset}}))];
     if(c.transcript?.trim())items.push({type:'memory.transcript',payload:{id:mId,text:c.transcript,language:c.language||'both',kind:'original',assetId:c.transcriptAssetId||assets.find(a=>a.mime?.startsWith('audio/')||a.mime?.startsWith('video/'))?.id||null}});
+    for(const completed of (c.autoTranscripts||[])){
+      const segments=completed.segments||[];
+      const transcript=segments.map(x=>'['+formatTime(x.start)+'] '+x.text).join('\n');
+      if(transcript)items.push({type:'memory.transcript',payload:{id:mId,text:transcript,language:'both',kind:'local-whisper',assetId:completed.assetId}});
+      for(const clip of suggestTimedClips(segments)){
+        items.push({type:'memory.moment',payload:{id:mId,assetId:completed.assetId,start:clip.start,end:clip.end,title:clip.title,text:clip.text,branch:clip.branch,kind:'automatically-suggested'}});
+      }
+    }
     await appendEventBatch(state.key,items,state.actor);
     clearTimeout(state.draftTimer);state.draftTimer=null;
-    state.recordAsset=null;state.recordAssets=[];state.failedRecording=null;state.recordFile=null;state.uploadedFile=null;state.uploadedAsset=null;state.uploadedAssets=[];state.photoFiles=[];state.photoAssets=[];state.capture={};await clearDraft(state.key);state.memoryId=mId;state.view='detail';
+    state.recordAsset=null;state.recordAssets=[];state.failedRecording=null;state.recordFile=null;state.uploadedFile=null;state.uploadedAsset=null;state.uploadedAssets=[];state.photoFiles=[];state.photoAssets=[];state.capture={};state.transcription=null;await clearDraft(state.key);state.memoryId=mId;state.view='detail';
     await reload();window.scrollTo(0,0);toast('✿ Memory saved on this device. Export an encrypted backup after important interviews.');
   }finally{state.busy=false;}
 }
@@ -391,6 +445,7 @@ async function handleAction(action,node){
     case 'clear-branch':state.branch='all';render();break;
     case 'start-record':await startRecording();break;
     case 'stop-record':stopRecording();break;
+    case 'cancel-transcription':state.transcriptionCancel?.();if(state.transcription)state.transcription.status='Stopping local transcription…';break;
     case 'save-memory':await saveMemory();break;
     case 'recover-record':if(state.failedRecording)downloadBlob(state.failedRecording,state.failedRecording.name);break;
     case 'dismiss-failed-record':
@@ -532,7 +587,19 @@ app.addEventListener('click',async e=>{
   const detail=e.target.closest('[data-detail]');if(detail){showDetail(detail.dataset.detail);if(detail.dataset.detailStart!==undefined){
     const players=[...document.querySelectorAll('[data-play-id]')];
     const p=players.find(x=>x.dataset.playId===detail.dataset.detailAsset)||players[0];
-    if(p){const seek=()=>{p.currentTime=Number(detail.dataset.detailStart)||0;};if(p.readyState>=1)seek();else p.addEventListener('loadedmetadata',seek,{once:true});}
+    if(p){
+      const start=Number(detail.dataset.detailStart)||0;
+      const end=Number(detail.dataset.detailEnd);
+      const seek=()=>{
+        p.currentTime=start;
+        if(Number.isFinite(end)&&end>start){
+          const stop=()=>{if(p.currentTime>=end){p.pause();p.removeEventListener('timeupdate',stop);}};
+          p.addEventListener('timeupdate',stop);
+        }
+        p.play().catch(()=>{});
+      };
+      if(p.readyState>=1)seek();else p.addEventListener('loadedmetadata',seek,{once:true});
+    }
   }return;}
   const person=e.target.closest('[data-person-detail]');if(person){openDialog('person-detail',{id:person.dataset.personDetail});return;}
   const tm=e.target.closest('[data-person-timeline]');if(tm){state.selectedPerson=tm.dataset.personTimeline;render();return;}
@@ -564,7 +631,17 @@ app.addEventListener('change',async e=>{
       const selected=new Set(state.capture.personIds||[]);if(el.checked)selected.add(el.value);else selected.delete(el.value);state.capture.personIds=[...selected];scheduleDraft();
     }
     if(el.id==='upload-photos'){state.photoFiles=[...el.files].filter(x=>x.type.startsWith('image/'));for(const file of state.photoFiles){await ensureFileSize(file);state.photoAssets.push(await saveAsset(state.key,file));}await persistDraft();render();}
-    if(el.id==='upload-media'){for(const file of [...el.files]){if(!file.type.startsWith('audio/')&&!file.type.startsWith('video/'))throw new Error('Choose audio or video files.');await ensureFileSize(file);state.uploadedAssets.push(await saveAsset(state.key,file));}await persistDraft();render();}
+    if(el.id==='upload-media'){
+      const files=[...el.files];
+      for(const file of files){
+        if(!file.type.startsWith('audio/')&&!file.type.startsWith('video/'))throw new Error('Choose audio or video files.');
+        await ensureFileSize(file);
+        const asset=await saveAsset(state.key,file);
+        state.uploadedAssets.push(asset);
+        await persistDraft();render();
+        if(state.autoTranscribe)await transcribeImportedOriginal(file,asset);
+      }
+    }
     if(el.id==='portrait-upload'){
       const file=el.files?.[0];if(!file)return;
       if(!file.type.startsWith('image/'))throw new Error('Choose an image for the portrait.');
@@ -572,6 +649,7 @@ app.addEventListener('change',async e=>{
       const personId=state.dialog?.id;if(!personId)throw new Error('Select a person first.');
       await event('person.photo',{personId,asset});closeDialog();toast('Portrait preserved in the family archive.');
     }
+    if(el.id==='auto-transcribe'){state.autoTranscribe=el.checked;toast(state.autoTranscribe?'Private transcription enabled for future uploads.':'Automatic transcription disabled.');}
     if(el.id==='auto-download'){state.autoDownload=el.checked;await setPreference('auto-download',state.autoDownload);toast(`Automatic original downloads ${state.autoDownload?'enabled':'disabled'}.`);}
     if(el.id==='prompt-language'){state.language=el.value;await setPreference('language',el.value);toast('Prompt language saved.');}
     if(el.id==='actor-name'){state.actor=el.value.trim()||'A family member';await setPrivatePreference(state.key,'actor',state.actor);toast('Contributor name saved.');}

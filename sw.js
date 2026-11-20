@@ -1,7 +1,7 @@
-const CACHE = 'memory-grove-shell-v5';
+const CACHE = 'memory-grove-shell-v6';
 const APP_SHELL = ['./', './index.html', './app.js', './db.js', './model.js', './crypto.js', './art.js', './styles.css', './painting.css', './assets/grove-miniature.svg', './assets/courtyard.webp', './manifest.webmanifest', './privacy.html', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-apple.png'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(async cache => {await cache.addAll(APP_SHELL);await cache.add('./transcriber.js').catch(()=>{});}).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
