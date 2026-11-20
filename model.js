@@ -125,3 +125,32 @@ export function followupFor(text,name='them') {
   if(source.trim().length>25)return 'What happened just before that, and how did you feel in the moment?';
   return `What is the first place ${name} remembers calling home?`;
 }
+
+
+// Timestamped virtual clips refer to the unmodified source recording.
+export function suggestTimedClips(segments,{minSeconds=25,maxSeconds=155}={}) {
+  if(!Array.isArray(segments))return [];
+  const items=segments.map(x=>({start:Number(x.start),end:Number(x.end),text:String(x.text||'').replace(/\s+/g,' ').trim()}))
+    .filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.start>=0&&x.end>x.start&&x.text).sort((a,b)=>a.start-b.start);
+  const clips=[];let group=[],category='wisdom';
+  const flush=()=>{
+    if(!group.length)return;
+    const text=group.map(x=>x.text).join(' ').trim();
+    const branch=category==='wisdom'?suggestBranch(text):category;
+    let title=text.split(/\s+/).slice(0,9).join(' ').replace(/[.?!।,;:]+$/,'');
+    if(title.length>76)title=title.slice(0,73)+'…';
+    clips.push({start:group[0].start,end:group[group.length-1].end,text,branch,title:title||branchFor(branch).name});
+    group=[];category='wisdom';
+  };
+  for(const seg of items){
+    const guess=suggestBranch(seg.text);
+    const change=group.length&&guess!==category&&guess!=='wisdom'&&category!=='wisdom'&&seg.start-group[0].start>=minSeconds;
+    const long=group.length&&seg.end-group[0].start>maxSeconds;
+    const gap=group.length&&seg.start-group[group.length-1].end>35;
+    if(change||long||gap)flush();
+    if(!group.length)category=guess;
+    else if(category==='wisdom'&&guess!=='wisdom')category=guess;
+    group.push(seg);
+  }
+  flush();return clips;
+}
